@@ -7,12 +7,8 @@ const pkg = require('./package.json');
 // 請求機器人套件
 const TelegramBot = require('node-telegram-bot-api');
 const myToken = "8089640477:AAEuKz4Y1HERaV2ugGCVUU0Znw9LMb8EK04"
-const bot = new TelegramBot(myToken, {polling: true})
 
-// 取得天氣資料 API
-const axios = require('axios');
-const { restart } = require('nodemon');
-const URL = "https://aviationweather.gov/data/api/"
+const bot = new TelegramBot(myToken)
 
 // middleware
 app.use(express.json());
@@ -31,38 +27,70 @@ app.get("*", async (req,res) => {
 })
 
 // bot start
-bot.startPolling({restart:true},(msg,error)=>{
+bot.startPolling((msg,error)=>{
     const chatId = msg.chat.id;
 
-    try {
-        bot.sendMessage(chatId,`哈囉！歡迎使用機師天氣查詢系統！
+    bot.sendMessage(chatId,`哈囉！歡迎使用機師天氣查詢系統！
         以下是所有指令的使用表格：
-        /airport 取得機場天氣資料
-        /metar 取得meTARs
-        /taf 取得 taf `)
-    } catch (error) {
-        bot.sendMessage(msg.chat.id,"啟動機器人失敗，請使用 /Start 來啟動天氣查詢機器人");
-    }
+        /airport ICAO
+        /metar ICAO
+        /taf ICAO 
+        /dev 取得開發人員資料`)
 })
 
 bot.on('message', (msg,error) => {
     const chatId = msg.chat.id;
     const text = msg.text;
 
-    try {
-        if(text === "/start"){
-            bot.sendMessage(chatId,`哈囉！歡迎使用機師天氣查詢系統！
-            以下是所有指令的使用表格：
-            /airport 取得機場天氣資料
-            /metar 取得meTARs
-            /taf 取得 taf `)
-        } else {
-            bot.sendMessage(msg.chat.id,"啟動機器人失敗，請使用 /Start 來啟動天氣查詢機器人");
+    if (text === "/start") {
+        bot.sendMessage(chatId, `哈囉！歡迎使用機師天氣查詢系統！
+        以下是所有指令的使用表格：
+        /airport ICAO
+        /metar ICAO
+        /taf ICAO 
+        /dev 取得開發人員資料`);
+    } else {
+        // 如果收到的訊息不是 "/start"，你可以選擇不回應，或提供指引
+        // 比如這樣：
+        if (!text.startsWith("/")) {
+            bot.sendMessage(chatId, "請使用有效的指令。若要開始，請輸入 /start");
         }
-    } catch (error) {
-        console.error(error)
     }
 });
+
+
+bot.on('message',async msg  => {
+    const chatId = msg.chat.id;
+    const text = msg.text
+    const airportCode = text.slice(9).trim();
+    // 取得天氣資料 API
+    const axios = require('axios');
+    const config = {
+      method: 'get',
+      url: `https://api.checkwx.com/station/${airportCode}?x-api-key=27a94ede1cb44287bc906ad311`,
+    };
+
+        // 檢查訊息是不是為空
+        if(!text){
+            console.error("訊息內容為空，無法發送")
+        }
+    
+        const response =await axios(config)
+        const airportData = response.data.data ? response.data.data[0] : null; 
+
+        // 伺服器找不到資料
+        if (!airportData) {
+            bot.sendMessage(chatId, "很抱歉，伺服器找不到資料");
+        }
+    
+        // 輸入 /airport IATA 應該要有的反應
+        if (text === `/airport ${airportCode}`) {
+            bot.sendMessage(chatId, `查詢到的機場為: ${airportData.icao} - 機場名稱: ${airportData.name} - 城市名稱: ${airportData.city}`);
+        }
+    }
+)
+
+
 
 app.listen(PORT, () => {
     console.log(`伺服器啟動在 http://localhost:${PORT}`)
