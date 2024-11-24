@@ -21,4 +21,11 @@ nodemon index.js
 # 作者
 * @uTIstIbL
 
+# 注意
+* Airmet 僅能在美洲地區做使用，其他地區似乎正在開發中，尚未有任何資料。
+
+# 參考資料
+* https://github.com/yagop/node-telegram-bot-api/tree/master
+* https://www.checkwxapi.com/
+
 
